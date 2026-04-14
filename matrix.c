@@ -4,89 +4,157 @@
 #include <stdio.h>
 #include <math.h>
 
-void freedom(int **_Memory, int l)
+struct matrix_t {
+    void *data;
+    int rows;
+    int cols;
+    int elem_type;        /* 0 = int, 1 = float */
+};
+
+/* ================================================================
+ * Creation / Destruction
+ * ================================================================ */
+
+matrix_t *CreateMatrixInt(int i, int j)
 {
-    for (int i = 0; i < l; i++)
+    int **d = (int **)malloc(i * sizeof(int *));
+    for (int r = 0; r < i; r++)
+        d[r] = (int *)calloc(j, sizeof(int));
+
+    matrix_t *m = (matrix_t *)malloc(sizeof(matrix_t));
+    m->data = d;
+    m->rows = i;
+    m->cols = j;
+    m->elem_type = 0;
+    return m;
+}
+
+matrix_t *CreateMatrixFloat(int i, int j)
+{
+    float **d = (float **)malloc(i * sizeof(float *));
+    for (int r = 0; r < i; r++)
+        d[r] = (float *)calloc(j, sizeof(float));
+
+    matrix_t *m = (matrix_t *)malloc(sizeof(matrix_t));
+    m->data = d;
+    m->rows = i;
+    m->cols = j;
+    m->elem_type = 1;
+    return m;
+}
+
+void freedom(matrix_t *m)
+{
+    if (!m) return;
+    if (m->elem_type == 0)
     {
-        free(_Memory[i]);
+        int **d = (int **)m->data;
+        for (int i = 0; i < m->rows; i++)
+            free(d[i]);
+        free(d);
     }
-    free(_Memory);
-}
-
-
-int **CreateMatrixInt(int i, int j)
-{
-    int **Matriz = (int**)malloc(i * (sizeof(int *)));
-    for (int cont = 0; cont < i; cont++)
-        Matriz[cont] =(int*) malloc(j * sizeof(int));
-    return Matriz;
-}
-
-
-float **CreateMatrixFloat(int i, int j)
-{
-    float **Matriz = (float**)malloc(i * (sizeof(float *)));
-    for (int cont = 0; cont < i; cont++)
-        Matriz[cont] = (float*)malloc(j * sizeof(float));
-    return Matriz;
-}
-
-
-void InputMatrixInt(int **Matriz, int l, int c)
-{
-    for (int i = 0; i < l; i++)
+    else
     {
-        printf("//Digite os %d elementos da linha %d\n", c, (i + 1));
-        for (int j = 0; j < c; j++)
+        float **d = (float **)m->data;
+        for (int i = 0; i < m->rows; i++)
+            free(d[i]);
+        free(d);
+    }
+    free(m);
+}
+
+/* ================================================================
+ * Element access
+ * ================================================================ */
+
+int MatrixGetInt(matrix_t *m, int r, int c)
+{
+    return ((int **)m->data)[r][c];
+}
+
+void MatrixSetInt(matrix_t *m, int r, int c, int val)
+{
+    ((int **)m->data)[r][c] = val;
+}
+
+float MatrixGetFloat(matrix_t *m, int r, int c)
+{
+    return ((float **)m->data)[r][c];
+}
+
+void MatrixSetFloat(matrix_t *m, int r, int c, float val)
+{
+    ((float **)m->data)[r][c] = val;
+}
+
+/* ================================================================
+ * I/O
+ * ================================================================ */
+
+void InputMatrixInt(matrix_t *m)
+{
+    int **d = (int **)m->data;
+    for (int i = 0; i < m->rows; i++)
+    {
+        printf("//Digite os %d elementos da linha %d\n", m->cols, (i + 1));
+        for (int j = 0; j < m->cols; j++)
         {
-            scanf("%d", &Matriz[i][j]);
+            scanf("%d", &d[i][j]);
         }
     }
 }
 
-
-void PrintMatrixInt(int **Matriz, int l, int c)
+void PrintMatrixInt(matrix_t *m)
 {
-    for (int i = 0; i < l; i++)
+    int **d = (int **)m->data;
+    for (int i = 0; i < m->rows; i++)
     {
-        for (int j = 0; j < c; j++)
+        for (int j = 0; j < m->cols; j++)
         {
-            printf("%5d", Matriz[i][j]);
+            printf("%5d", d[i][j]);
         }
         printf("\n");
     }
 }
 
-
-void PrintMatrixfloat(float **Matriz, int l, int c)
+void PrintMatrixfloat(matrix_t *m)
 {
-    for (int i = 0; i < l; i++)
+    float **d = (float **)m->data;
+    for (int i = 0; i < m->rows; i++)
     {
-        for (int j = 0; j < c; j++)
+        for (int j = 0; j < m->cols; j++)
         {
-            printf("%10.3g", Matriz[i][j]);
+            printf("%10.3g", d[i][j]);
         }
         printf("\n");
     }
 }
 
+/* ================================================================
+ * Operations
+ * ================================================================ */
 
-int **TransMatrixInt(int **matriz, int l, int c)
+matrix_t *TransMatrixInt(matrix_t *m)
 {
-    int **transposta = CreateMatrixInt(l, c);
-    for (int i = 0; i < l; i++)
+    int **d = (int **)m->data;
+    matrix_t *t = CreateMatrixInt(m->cols, m->rows);
+    int **td = (int **)t->data;
+    for (int i = 0; i < m->cols; i++)
     {
-        for (int j = 0; j < c; j++)
+        for (int j = 0; j < m->rows; j++)
         {
-            transposta[i][j] = matriz[j][i];
+            td[i][j] = d[j][i];
         }
     }
-    return transposta;
+    return t;
 }
 
-int **SubMatrix(int **matriz, int o, int l, int c)
+matrix_t *SubMatrix(matrix_t *m, int l, int c)
 {
-    int **submatriz = CreateMatrixInt(o - 1, o - 1);
+    int o = m->rows;
+    int **d = (int **)m->data;
+    matrix_t *sub = CreateMatrixInt(o - 1, o - 1);
+    int **sd = (int **)sub->data;
     for (int i = 0, w = 0; i < o; i++)
     {
         if (i == (l - 1))
@@ -101,77 +169,86 @@ int **SubMatrix(int **matriz, int o, int l, int c)
                 else
                 {
                     z++;
-                    submatriz[w - 1][z - 1] = matriz[i][j];
+                    sd[w - 1][z - 1] = d[i][j];
                 }
             }
         }
     }
-    return submatriz;
+    return sub;
 }
 
-int det(int **matriz, int o)
+int det(matrix_t *m)
 {
+    int o = m->rows;
+    int **d = (int **)m->data;
     int r = 0;
     if (o == 1)
     {
-        r = matriz[0][0];
+        r = d[0][0];
         return r;
     }
     else if (o == 2)
     {
-        r = ((matriz[0][0] * matriz[1][1]) - (matriz[0][1] * matriz[1][0]));
+        r = ((d[0][0] * d[1][1]) - (d[0][1] * d[1][0]));
         return r;
     }
     else
     {
         for (int i = 0, j = 0; j < o; j++)
         {
-            r += (matriz[i][j] * (pow((-1), (i + j + 2))) * det(SubMatrix(matriz, o, 1, j + 1), (o - 1)));
+            r += (d[i][j] * (pow((-1), (i + j + 2))) * det(SubMatrix(m, 1, j + 1)));
         }
         return r;
     }
 }
 
-float **Inverse(int **matriz, int o)
+matrix_t *Inverse(matrix_t *m)
 {
-    float determinante = (float)det(matriz, o);
-    int **MatrizCof = CreateMatrixInt(o, o); // matriz dos cofatores.
+    int o = m->rows;
+    float determinante = (float)det(m);
+    matrix_t *MatrizCof = CreateMatrixInt(o, o);
     for (int i = 0; i < o; i++)
     {
         for (int j = 0; j < o; j++)
         {
-            MatrizCof[i][j] = ((pow((-1), (i + j + 2))) * det(SubMatrix(matriz, o, i + 1, j + 1), (o - 1)));
+            MatrixSetInt(MatrizCof, i, j,
+                (int)((pow((-1), (i + j + 2))) * det(SubMatrix(m, i + 1, j + 1))));
         }
     }
-    int **adjunta = TransMatrixInt(MatrizCof, o, o); // matriz adjunta (transposta da matriz dos cofatores)
-    float **inversa = CreateMatrixFloat(o, o);        // recebe a adjunta multiplicada pelo o inverso do determinate.
+    matrix_t *adjunta = TransMatrixInt(MatrizCof);
+    matrix_t *inversa = CreateMatrixFloat(o, o);
     for (int i = 0; i < o; i++)
     {
         for (int j = 0; j < o; j++)
         {
-            inversa[i][j] = (float)(1.00 / determinante) * (float)adjunta[i][j];
+            MatrixSetFloat(inversa, i, j,
+                (float)(1.00 / determinante) * (float)MatrixGetInt(adjunta, i, j));
         }
     }
-    freedom(adjunta, o);
-    freedom(MatrizCof, o);
+    freedom(adjunta);
+    freedom(MatrizCof);
     return inversa;
 }
 
-int **MultipliMatrix(int **Matriz_a, int la, int ca, int **Matriz_b, int lb, int cb)
+matrix_t *MultipliMatrix(matrix_t *a, matrix_t *b)
 {
-    int **resultado = CreateMatrixInt(la, cb);
+    int la = a->rows, ca = a->cols, cb = b->cols;
+    int **da = (int **)a->data;
+    int **db = (int **)b->data;
+    matrix_t *result = CreateMatrixInt(la, cb);
+    int **dr = (int **)result->data;
     for (int i = 0; i < la; i++)
     {
         for (int j = 0; j < cb; j++)
         {
-            resultado[i][j] = 0;
+            dr[i][j] = 0;
             for (int w = 0; w < ca; w++)
             {
-                resultado[i][j] += (Matriz_a[i][w] * Matriz_b[w][j]);
+                dr[i][j] += (da[i][w] * db[w][j]);
             }
         }
     }
-    return resultado;
+    return result;
 }
 
 #endif
